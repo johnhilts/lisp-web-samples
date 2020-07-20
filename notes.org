@@ -1,0 +1,19 @@
+* Sameple Web Dev Code
+
+* AJAX 
+** GET handler that takes optional args and returns a JSON payload
+** POST handler that takes multiple args and returns 201, etc
+
+* Form
+** Name text input
+** Select 
+** Checkbox
+** Submit button
+** post to AJAX handler
+** Client side validation 
+** Server side validation
+
+* JS Explorations
+** moment.js
+-- download from here: https://momentjs.com/downloads/moment.js
+** geolocation
