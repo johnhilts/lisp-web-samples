@@ -60,11 +60,14 @@
 (defun get-person (name)
   (let ((person (get-person-by-name name)))
     (json:encode-json-to-string person)))
+
+(defun get-everyone ()
+  (json:encode-json-to-string (create-test-people)))
   
-(define-easy-handler (sample-person :uri "/people") (a-name)
+(define-easy-handler (sample-person :uri "/people") (name)
   (setf (content-type*) "application/json")
-  (if a-name
-      (get-person a-name)
+  (if name
+      (get-person name)
       (get-everyone)))
 
 (defun stop-server (server)
