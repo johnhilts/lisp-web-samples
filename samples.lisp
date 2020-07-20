@@ -6,7 +6,11 @@
 (in-package :samples-webapp)
 
 (defun start-server (port)
-  (start (make-instance 'easy-acceptor :port port)))
+  (restart-case (start (make-instance 'easy-acceptor :port port))
+    (re-start-server ()
+      :report "Restart Web Server"
+      (stop-server *the-http-server*)
+      (start-server port))))
 
 (setf (html-mode) :html5)
 
