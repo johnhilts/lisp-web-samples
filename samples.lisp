@@ -28,6 +28,36 @@
         
   (publish-static-content))
 
+(defun get-name-list ()
+  (ps
+    (defun get-name-list ()
+      (flet ((req-listener () 
+               (chain console (log (@ this response-text)))))
+
+        (let ((o-req (new (-x-m-l-http-request))))
+          (chain o-req (add-event-listener "load" req-listener))
+          (chain o-req (open "GET" "/people"))
+          (chain o-req (send)))))))
+
+(defun in-line-javascript ()
+  (ps (defun name-list-handler (evt)
+        (chain evt (prevent-default))
+        (get-name-list))
+      (defun add-todo (evt)
+        (chain evt (prevent-default))
+        (setf todo (chain document (get-element-by-id "todo-content")))
+        (alert (@ todo value)))
+      (defun init ()
+        (setf add-button (chain document
+                                (get-element-by-id "todo-add-btn")))
+        (chain add-button
+               (add-event-listener "click" add-todo false))
+        (setf name-list-button (chain document
+                                      (get-element-by-id "get-names-btn")))
+        (chain name-list-button
+               (add-event-listener "click" name-list-handler false)))
+      (setf (chain window onload) init)))
+
 (defun make-sample-page ()
   (with-html-output-to-string
       (*standard-output* nil :prologue t :indent t)
@@ -39,16 +69,9 @@
                    :rel "stylesheet"
                    :href "/styles.css")
             (:script :type "text/javascript"
-                     (str (ps (defun add-todo (evt)
-                                (chain evt (prevent-default))
-                                (setf todo (chain document (get-element-by-id "todo-content")))
-                                (alert (@ todo value)))
-                              (defun init ()
-                                (setf add-button (chain document
-                                                      (get-element-by-id "todo-add-btn")))
-                                (chain add-button
-                                       (add-event-listener "click" add-todo false)))
-                              (setf (chain window onload) init)))))
+                     (str (stringify
+                           (get-name-list)
+                           (in-line-javascript)))))
            (:body
             (:div
              (:h1 "Sample Input Form"
@@ -56,6 +79,10 @@
                    (:input :id "todo-check" :type "checkbox" :onclick (ps-inline (alert "You clicked the checkbox!")))
                    (:textarea :id "todo-content" :placeholder "Enter Todo info here.")
                    (:button :id "todo-add-btn" "Add")
+                   )
+                  (:div
+                   (:h2 "Click here to get a list of names")
+                   (:button :id "get-names-btn" "Get Names")
                    )))))))
 
 (define-easy-handler (sample-page :uri "/sample") ()
