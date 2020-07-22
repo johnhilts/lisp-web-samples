@@ -31,8 +31,15 @@
 (defun get-name-list ()
   (ps
     (defun get-name-list ()
-      (flet ((req-listener () 
-               (chain console (log (@ this response-text)))))
+      (flet ((req-listener ()
+               (let* ((names (chain -j-s-o-n (parse (@ this response-text))))
+                      (serialized-names (chain names (reduce
+                                                      #'(lambda (acc cur)
+                                                          (let ((current-name (+ "Name: " (@ cur name) ", Age: " (@ cur age))))
+                                                            (if acc
+                                                                (concatenate 'string acc #\Newline current-name)
+                                                                current-name))) ""))))
+                 (setf (chain document (get-element-by-id "names-textarea") value) serialized-names))))
 
         (let ((o-req (new (-x-m-l-http-request))))
           (chain o-req (add-event-listener "load" req-listener))
@@ -83,6 +90,8 @@
                   (:div
                    (:h2 "Click here to get a list of names")
                    (:button :id "get-names-btn" "Get Names")
+                   (:br)
+                   (:textarea :id "names-textarea" :placeholder "Names Listed here" :style "height:100px;width:300px;")
                    )))))))
 
 (define-easy-handler (sample-page :uri "/sample") ()
