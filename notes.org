@@ -17,3 +17,26 @@
 ** moment.js
 -- download from here: https://momentjs.com/downloads/moment.js
 ** geolocation
+
+* JS Macros
+** A very poor man's jsx
+I want to take something like this:
+#+BEGIN_SRC lisp
+(ps (defun some-js-stuff ()
+ (let ((my-table  (chain document (get-element-by-id "my-table"))))
+  (dolist (name names)
+   (js-html (tr (td name))))))) ; this renders as <tr><td>John</td></tr> using "html" macro
+
+(defun html-output-using-cl-who ()
+(:html
+(:body
+(:table :id "my-table"))))
+#+END_SRC
+
+*** Brainstorming
+ (tr (td name))
+
+ (tr (td name)) <-- (listp tags) (atom (car tags)) (listp (cdr tags)) => add "<"
+ ((td name)) <-- (listp tags) (listp (car tags)) => recursion
+ (td name) <-- (listp tags) (atom (car tags)) (listp (cdr tags)) => same as 1st condition
+ (name) <-- (listp tags) (atom (car tags)) (null (cdr tags)) => we've found a lonely atom

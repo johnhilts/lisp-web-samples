@@ -28,6 +28,32 @@
         
   (publish-static-content))
 
+(defun js-html-fn (tags)
+  (let ((html ""))
+    (labels
+        ((js-html-fn-r (tags)
+           (let ((tag (car tags)))
+             (cond
+               ((null tags) "")
+               ((and (listp tags) (atom tag) (null (cdr tags)))
+                (concatenate 'string html (string tag)))
+               ((and (listp tags) (atom tag) (listp (cdr tags)))
+                (concatenate 'string html "<" (string tag) ">" (js-html-fn-r (cdr tags)) "</" (string tag) ">"))
+               ((and (listp tags) (listp tag))
+                (js-html-fn-r tag))
+               (t
+                (concatenate 'string html (string tag)))))))
+      (js-html-fn-r tags))))
+
+(defmacro js-html (&body tags)
+  "this has to use document.createElement() or whatever the DOM function is"
+  `(progn
+     ,@(do ((tag-head tags (cdr (car tag-head)))
+            (html "")
+            (res ()))
+           ((null tag-head) res)
+         (push `(setf html (concatenate 'string ,html (string ,(car (car tag-head))))) res))))
+  
 (defun get-name-list ()
   (ps
     (defun get-name-list ()
