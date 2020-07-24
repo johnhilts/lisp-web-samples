@@ -36,7 +36,41 @@ I want to take something like this:
 *** Brainstorming
  (tr (td name))
 
- (tr (td name)) <-- (listp tags) (atom (car tags)) (listp (cdr tags)) => add "<"
+ (tr (td name)) <-- (listp tags) (atom (car tags)) (listp (cdr tags)) => add "<" tag recursion
  ((td name)) <-- (listp tags) (listp (car tags)) => recursion
  (td name) <-- (listp tags) (atom (car tags)) (listp (cdr tags)) => same as 1st condition
- (name) <-- (listp tags) (atom (car tags)) (null (cdr tags)) => we've found a lonely atom
+ (name) <-- (listp tags) (atom (car tags)) (null (cdr tags)) => we've found a lonely atom add atom
+
+**** Using DOM API
+***** create a table
+#+BEGIN_SRC javascript
+var sampleDiv = document.getElementById("sample-div")
+var sampleTd = document.createElement("td")
+var node = document.createTextNode("Name: John")
+sampleTd.appendChild(node)
+var sampleTr = document.createElement("tr")
+sampleTr.appendChild(sampleTd)
+var sampleTable = document.createElement("table")
+sampleTable.appendChild(sampleTr)
+sampleDiv.appendChild(sampleTable)
+#+END_SRC
+
+***** Scenarios
+- (tr (td name))
+- (tr (td name) (td age))
+- (tr style (td style name) (td style age))
+****** Flow
+- (tr (td name))
+  - get atom, create element, get next list (tr, get td)
+    - get atom, create element, add any atoms as text nodes (td name)
+  - append child element to this level element (tr + td)
+- (tr (td name) (td age)) - should the tds be wrapped in a container list? Prolly not needed bc cdr
+  - get atom, create element, get next list (tr, get td)
+    - get atom, create element, add any atoms as text nodes (td name)
+  - append child element to this level element (tr + td)
+- (tr :style "my-style" (td :style "my-style" name) (td :style "my-style" age)) <-- make attributes keywords, and text are strings
+  - go through each element in the list ...
+    - (car list) - create element!
+    - (keywordp & atom) - add attribute! (syntax?)
+    - (stringp & atom) - create text node! (to current element)
+    - (listp) - recursive call! then add to current element!
