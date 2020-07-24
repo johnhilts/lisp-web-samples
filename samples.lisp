@@ -35,6 +35,27 @@
            (let ((tag (car tags)))
              (cond
                ((null tags) "")
+               ((listp tag) (js-html-fn-r tag))
+               ((atom tag)
+                (setf html (concatenate 'string html "<" (string tag) ">" (string #\Newline) (string #\Tab)))
+                (mapcar
+                 #'(lambda (tag)
+                     (cond
+                       ((keywordp tag) "add-attribute")
+                       ((atom tag)
+                        (setf html (concatenate 'string html " " (string tag))))
+                       ((listp tag) (js-html-fn-r tag)))) (cdr tags))
+                (setf html (concatenate 'string html (string #\Newline) (string #\Tab) "</" (string tag) ">" (string #\Newline))))))))
+      (js-html-fn-r tags)
+      html)))
+
+(defun js-html-fn1 (tags)
+  (let ((html ""))
+    (labels
+        ((js-html-fn-r (tags)
+           (let ((tag (car tags)))
+             (cond
+               ((null tags) "")
                ((and (listp tags) (atom tag) (null (cdr tags)))
                 (concatenate 'string html (string tag)))
                ((and (listp tags) (atom tag) (listp (cdr tags)))
@@ -113,7 +134,7 @@
                    (:textarea :id "todo-content" :placeholder "Enter Todo info here.")
                    (:button :id "todo-add-btn" "Add")
                    )
-                  (:div
+                  (:div :id "sample-div"
                    (:h2 "Click here to get a list of names")
                    (:button :id "get-names-btn" "Get Names")
                    (:br)
