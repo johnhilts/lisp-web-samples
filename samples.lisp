@@ -28,6 +28,43 @@
         
   (publish-static-content))
 
+(defun js-html->dom-reduce-fn (tags)
+  (labels
+      ((create-open-tag (tag)
+         (let ((tag-text (string-downcase tag)))
+           (concatenate 'string "var " tag-text "Element = document.createElement(\"" tag-text "\")" (string #\Newline))))
+       (create-text-node (acc tag)
+         (let ((tag-text (string-downcase tag)))
+           (concatenate 'string acc "var " tag-text "TextNode = document.createTextNode(\"" tag-text "\")" (string #\Newline))))
+       (js-html-fn-r (acc cur)
+         (cond
+           ((keywordp cur)
+            (concatenate 'string acc "element.addAttribute(\"" (string cur) "\", \"???\")" (string #\Newline)))
+           ((listp cur) (concatenate 'string acc (reduce #'js-html-fn-r cur :initial-value "")))
+           ((and (zerop (length acc)) (atom cur)) ; list head
+            (create-open-tag cur))
+           ((atom cur) (create-text-node acc cur)))))
+    (reduce #'js-html-fn-r tags :initial-value "")))
+
+(defun js-html->string-reduce-fn (tags)
+  (labels
+      ((create-open-tag (tag)
+         (concatenate 'string "<" (string tag) ">"))
+       (create-text-node (acc tag)
+         (concatenate 'string acc (string tag)))
+       (create-close-tag (acc tag)
+         (concatenate 'string acc "</" (string tag) ">"))
+       (js-html-fn-r (acc cur)
+         (cond
+           ((null cur) (concatenate 'string acc "</>"))
+           ((keywordp cur) "add-attribute")
+           ((listp cur) (concatenate 'string acc (reduce #'js-html-fn-r cur :initial-value "") "</>"))
+           ((and (zerop (length acc)) (atom cur)) ; list head
+            (create-open-tag cur))
+           ((atom cur) (create-text-node acc cur))
+           (t (create-close-tag acc cur)))))
+    (reduce #'js-html-fn-r tags :initial-value "")))
+
 (defun js-html->string-fn (tags)
   (let ((html ""))
     (labels
