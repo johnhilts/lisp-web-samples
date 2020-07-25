@@ -28,7 +28,55 @@
         
   (publish-static-content))
 
-(defun js-html->dom-reduce-fn (tags)
+(defun js-html->dom-fn (tags)
+  (let ((html ""))
+    (labels
+        ((create-element (tag &optional (parent nil parent-supplied-p))
+           (let ((tag-text (string-downcase tag)))
+             (concatenate 'string
+                          "var " tag-text "Element = document.createElement(\"" tag-text "\")"
+                          (string #\Newline)
+                          (if parent-supplied-p
+                              (concatenate 'string parent ".appendChild(" tag-text ")"
+                                           (string #\Newline))
+                              ""))))
+         (create-text-node (tag parent)
+           (let ((tag-text (string-downcase tag)))
+             (concatenate 'string
+                          "var " tag-text "TextNode = document.createTextNode(\"" tag-text "\")"
+                          (string #\Newline)
+                          parent ".appendChild(" tag-text"TextNode)"
+                          (string #\Newline))))         
+         (js-html-fn-r (tags &optional (parent nil parent-supplied-p))
+           (let ((tag (car tags)))
+             (cond
+               ((null tags) "")
+               ((listp tag)
+                (if parent-supplied-p
+                    (js-html-fn-r tag parent)
+                    (js-html-fn-r tag)))
+               ((atom tag)
+                (if parent-supplied-p
+                    (setf html (concatenate 'string html (create-element tag parent)))
+                    (setf html (concatenate 'string html (create-element tag))))
+                (mapcar
+                 #'(lambda (sub-tag)
+                     (cond
+                       ((keywordp sub-tag) "add-attribute")
+                       ((atom sub-tag) (setf html (concatenate 'string html (create-text-node sub-tag (string tag)))))
+                       ((listp sub-tag) (js-html-fn-r sub-tag (concatenate 'string (string tag) "subParentElement"))))) (cdr tags)))))))
+      (js-html-fn-r tags)
+      html)))
+
+
+(defun exercise-js-html->dom-fn ()
+  (labels ((print-js-string (tags)
+             (format t "~&~a =>~&~a~%" tags (js-html->dom-fn tags))))
+    (print-js-string '(tr (td name) (td age)))
+    (print-js-string '((td name) (td age)))
+    (print-js-string '(label age))))
+
+(defun js-html->dom-reduce-fn1 (tags)
   (labels
       ((create-open-tag (tag)
          (let ((tag-text (string-downcase tag)))
