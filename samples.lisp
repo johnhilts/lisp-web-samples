@@ -28,26 +28,39 @@
         
   (publish-static-content))
 
-(defun js-html-fn (tags)
+(defun js-html->string-fn (tags)
   (let ((html ""))
     (labels
-        ((js-html-fn-r (tags)
+        ((create-open-tag (tag)
+           (setf html (concatenate 'string html "<" (string tag) ">")))
+         (create-text-node (tag)
+           (setf html (concatenate 'string html (string tag))))
+         (create-close-tag (tag)
+           (setf html (concatenate 'string html "</" (string tag) ">")))
+         (js-html-fn-r (tags)
            (let ((tag (car tags)))
              (cond
                ((null tags) "")
                ((listp tag) (js-html-fn-r tag))
                ((atom tag)
-                (setf html (concatenate 'string html "<" (string tag) ">" (string #\Newline) (string #\Tab)))
+                (create-open-tag tag)
                 (mapcar
                  #'(lambda (tag)
                      (cond
                        ((keywordp tag) "add-attribute")
-                       ((atom tag)
-                        (setf html (concatenate 'string html " " (string tag))))
+                       ((atom tag) (create-text-node tag))
                        ((listp tag) (js-html-fn-r tag)))) (cdr tags))
-                (setf html (concatenate 'string html (string #\Newline) (string #\Tab) "</" (string tag) ">" (string #\Newline))))))))
+                (create-close-tag tag))))))
       (js-html-fn-r tags)
       html)))
+
+(defun exercise-js-html->string-fn ()
+  (labels ((print-js-string (tags)
+             (format t "~&~a => ~s~%" tags (js-html->string-fn tags))))
+    (print-js-string '(tr (td name) (td age)))
+    (print-js-string '((td name) (td age)))
+    (print-js-string '(label age))))
+
 
 (defun js-html-fn1 (tags)
   (let ((html ""))
