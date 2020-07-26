@@ -28,6 +28,11 @@
         
   (publish-static-content))
 
+(defun lisp->js-html-fn ()
+  (ps
+    (ps-html ((:a :href "foobar") "blorg"))
+    (who-ps-html (:a :href (generate-link) "blorg"))))
+
 (defun js-html->dom-fn (tags)
   (let ((html ""))
     (labels
