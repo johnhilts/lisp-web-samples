@@ -31,40 +31,43 @@
 (defun js-html->dom-fn (tags)
   (let ((html ""))
     (labels
-        ((create-element (tag &optional (parent nil parent-supplied-p))
+        ((create-element (tag random &optional (parent nil parent-supplied-p) parent-random)
            (let ((tag-text (string-downcase tag)))
              (concatenate 'string
-                          "var " tag-text "Element = document.createElement(\"" tag-text "\")"
+                          "var " tag-text "Element" random " = document.createElement(\"" tag-text "\")"
                           (string #\Newline)
                           (if parent-supplied-p
-                              (concatenate 'string parent ".appendChild(" tag-text ")"
+                              (concatenate 'string parent parent-random ".appendChild(" tag-text "Element" random ")"
                                            (string #\Newline))
                               ""))))
-         (create-text-node (tag parent)
+         (create-text-node (tag random parent parent-random)
            (let ((tag-text (string-downcase tag)))
              (concatenate 'string
-                          "var " tag-text "TextNode = document.createTextNode(\"" tag-text "\")"
+                          "var " tag-text "TextNode" random " = document.createTextNode(\"" tag-text "\")"
                           (string #\Newline)
-                          parent ".appendChild(" tag-text"TextNode)"
+                          parent "Element" parent-random ".appendChild(" tag-text"TextNode" random ")"
                           (string #\Newline))))         
-         (js-html-fn-r (tags &optional (parent nil parent-supplied-p))
+         (js-html-fn-r (tags &optional (parent nil parent-supplied-p) parent-random)
            (let ((tag (car tags)))
              (cond
                ((null tags) "")
                ((listp tag)
                 (if parent-supplied-p
-                    (js-html-fn-r tag parent)
+                    (js-html-fn-r tag parent parent-random)
                     (js-html-fn-r tag)))
                ((atom tag)
-                (if parent-supplied-p
-                    (setf html (concatenate 'string html (create-element tag parent)))
-                    (setf html (concatenate 'string html (create-element tag))))
-                (mapcar
-                 #'(lambda (sub-tag)
-                     (cond
-                       ((keywordp sub-tag) "add-attribute")
-                       ((atom sub-tag) (setf html (concatenate 'string html (create-text-node sub-tag (string tag)))))
-                       ((listp sub-tag) (js-html-fn-r sub-tag (concatenate 'string (string tag) "subParentElement"))))) (cdr tags)))))))
+                (let ((random (write-to-string (random 999))))
+                  (if parent-supplied-p
+                      (setf html (concatenate 'string html (create-element tag random parent parent-random)))
+                      (setf html (concatenate 'string html (create-element tag random))))
+                  (mapcar
+                   #'(lambda (sub-tag)
+                       (cond
+                         ((keywordp sub-tag) "add-attribute")
+                         ((atom sub-tag) (setf html (concatenate 'string
+                                                                 html (create-text-node sub-tag random (string-downcase tag) parent-random))))
+                         ((listp sub-tag) (js-html-fn-r sub-tag (concatenate 'string
+                                                                             (string-downcase tag) "Element") random)))) (cdr tags))))))))
       (js-html-fn-r tags)
       html)))
 
