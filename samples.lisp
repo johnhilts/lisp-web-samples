@@ -28,6 +28,21 @@
         
   (publish-static-content))
 
+(defun lisp->js-html-fn-deep (tags)
+  (cond
+    ((null tags) "")
+    ((atom tags) (string tags))
+    ((and (keywordp (car tags)) (stringp (cadr tags)))
+     (format nil " ~a=\"~a\" ~a" (car tags) (cadr tags)
+             (lisp->js-html-fn-deep (cddr tags))))
+    (t
+     (if (and (atom (car tags)) (not (stringp (car tags))))
+         (format nil "<~a>~a</~a>"
+                 (car tags)(lisp->js-html-fn-deep (cdr tags)) (car tags))
+         (format nil "~a ~a"
+                 (lisp->js-html-fn-deep (car tags))
+                 (lisp->js-html-fn-deep (cdr tags)))))))
+
 (defun lisp->js-html-fn ()
   (ps
     (ps-html ((:a :href "foobar") "blorg"))
