@@ -28,13 +28,53 @@
         
   (publish-static-content))
 
-(defun with-lisp-output-to-dom-fn-simple ()
-  (defmacro with-lisp-output-to-dom (&body tags)
-    (let* ((tag (symbol-to-js-string(car tags)))
+(defmacro simple-macro (&body tags)
+  `(progn ,(car tags)))
+   
+(defun simple-fn ()
+  (simple-macro (print "abc")))
+
+(defmacro nexterly-macro (&body tags)
+  (let* ((tag (caar tags))
+         (element-name (make-symbol (concatenate 'string "element" (string tag)))))
+    `(ps
+       (defun nexter-fn ()
+         (let ((,element-name ,tag))
+           ,element-name)))))
+   
+(defun nexterly-fn ()
+  (nexterly-macro
+    (tr)))
+
+(defmacro nexter-macro (&body tags)
+  `(ps
+     (defun nexter-fn ()
+       (let ((sample-element ,(caar tags)))
+         sample-element))))
+   
+(defun nexter-fn ()
+  (nexter-macro
+    (tr)))
+
+(defmacro next-macro (&body tags)
+  `(progn ,(car tags)))
+   
+(defun next-fn ()
+  (next-macro
+    '(tr)))
+
+(defun dynamic-list ()
+  (let ((name "John"))
+    (cons "name" name)))
+
+(defmacro with-lisp-output-to-dom (&body tags)
+  `(let* ((tag ,(car (car tags)))
           (element-name (concatenate 'string (symbol-to-js-string tag) "Element")))
-      `(let ((,element-name (chain document create-element ,tag)))
-         ,element-name)))
-  (with-lisp-output-to-dom '(tr (td "John"))))
+     `(ps (let ((,element-name 123))
+            ,element-name))))
+
+(defun with-lisp-output-to-dom-fn-simple ()
+  (with-lisp-output-to-dom ('tr ('td "John"))))
 
 (defmacro with-lisp-output-to-lisp-lol (&body tags)
   `(defun hard-coded-elements ()
