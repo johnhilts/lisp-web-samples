@@ -45,6 +45,7 @@
 
 (defun lisp->js-html-fn ()
   (ps
+    (ps-html (:tr (:td :style "color: red;" name)))
     (ps-html ((:a :href "foobar") "blorg"))
     (who-ps-html (:a :href (generate-link) "blorg"))))
 
