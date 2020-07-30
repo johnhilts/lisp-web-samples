@@ -28,6 +28,43 @@
         
   (publish-static-content))
 
+(defmacro with-lisp-output-to-lisp-lol (&body tags)
+  `(defun hard-coded-elements ()
+    (let ((sample-div (chain document (get-element-by-id "sample-div" (string ,tags)))))
+      sample-div)))
+
+(defun with-lisp-output-to-ps-fn ()
+  (ps
+    `(defun hard-coded-elements ()
+       (let ((sample-tr
+              (chain document (get-element-by-id
+                               (concatenate 'string
+                                            "sample" (symbol-to-js-string (car tags)))))))
+         sample-tr)))
+  (let ((name "John"))
+    (with-lisp-output-to-ps '(tr (td name)))))
+
+  (defmacro with-lisp-output-to-js (&body tags)
+    `(ps
+       (defun hard-coded-elements ()
+         (let ((sample-div (chain document (get-element-by-id "sample-div" (string ,tags)))))
+           sample-div))))
+
+  (defun hard-coded-table ()
+    (ps
+      (defun hard-coded-table ()
+        (let ((sample-div (chain document (get-element-by-id "sample-div")))
+              (sample-td (chain document (create-element "td")))
+              (node (chain document (create-text-node "Name: John")))
+              (sample-tr (chain document (create-element "tr")))
+              (sample-table (chain document (create-element "table"))))
+          (chain sample-td (append-child node))
+          (chain sample-tr (append-child sample-td))
+          (chain sample-table (append-child sample-tr))
+          (chain sample-div (append-child sample-table))
+          (chain sample-td (set-attribute "color" "red;"))
+          sample-div)))))))
+      
 (defun lisp->js-html-fn-deep (tags)
   (cond
     ((null tags) "")
