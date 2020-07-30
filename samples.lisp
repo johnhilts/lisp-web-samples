@@ -28,6 +28,14 @@
         
   (publish-static-content))
 
+(defun with-lisp-output-to-dom-fn-simple ()
+  (defmacro with-lisp-output-to-dom (&body tags)
+    (let* ((tag (symbol-to-js-string(car tags)))
+          (element-name (concatenate 'string (symbol-to-js-string tag) "Element")))
+      `(let ((,element-name (chain document create-element ,tag)))
+         ,element-name)))
+  (with-lisp-output-to-dom '(tr (td "John"))))
+
 (defmacro with-lisp-output-to-lisp-lol (&body tags)
   `(defun hard-coded-elements ()
     (let ((sample-div (chain document (get-element-by-id "sample-div" (string ,tags)))))
@@ -65,6 +73,22 @@
           (chain sample-td (set-attribute "color" "red;"))
           sample-div)))))))
       
+(defun lisp->js-dom-fn-deep (tags &optional parent)
+  (cond
+    ((null tags) "")
+    ((atom tags) (string tags))
+    ((and (keywordp (car tags)) (stringp (cadr tags)))
+     ; sampleTd.setAttribute("style", "background-color: Green;")
+     (format nil "~a.setAttribute(=\"~a\", \"~a~a" (car tags) (cadr tags)
+             (lisp->js-html-fn-deep (cddr tags))))
+    (t
+     (if (and (atom (car tags)) (not (stringp (car tags))))
+         (format nil "<~a>~a</~a>"
+                 (car tags)(lisp->js-html-fn-deep (cdr tags)) (car tags))
+         (format nil "~a ~a"
+                 (lisp->js-html-fn-deep (car tags))
+                 (lisp->js-html-fn-deep (cdr tags)))))))
+
 (defun lisp->js-html-fn-deep (tags)
   (cond
     ((null tags) "")
