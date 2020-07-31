@@ -36,10 +36,11 @@
 
 (defmacro nexterly-macro (&body tags)
   (let* ((tag (caar tags))
-         (element-name (make-symbol (concatenate 'string "element" (string tag)))))
+         (tag-text (string tag))
+         (element-name (make-symbol (concatenate 'string "element" tag-text))))
     `(ps
        (defun nexter-fn ()
-         (let ((,element-name ,tag))
+         (let ((,element-name (chain document (create-element ,(string-downcase tag-text)))))
            ,element-name)))))
    
 (defun nexterly-fn ()
