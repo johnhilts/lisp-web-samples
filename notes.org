@@ -71,6 +71,19 @@ sampleDiv.appendChild(sampleTable)
 - (tr :style "my-style" (td :style "my-style" name) (td :style "my-style" age)) <-- make attributes keywords, and text are strings
   - go through each element in the list ...
     - (car list) - create element!
-    - (keywordp & atom) - add attribute! (syntax?)
+    - (keywordp & atom) - add attribute! (syntax: sampleTd.setAttribute("style", "background-color: Green;"))
     - (stringp & atom) - create text node! (to current element)
     - (listp) - recursive call! then add to current element!
+
+* commented out code:
+                                          #||
+                                         ((and (keywordp (car tags)) (stringp (cadr tags)))
+(format nil " ~a=\"~a\" ~a" (car tags) (cadr tags)
+             (lisp->js-html-fn-deep (cddr tags)))
+                                        ;    ||#
+
+* what code might look like
+** what we can do today
+(ps
+(let ((people (get-people-list)))
+))

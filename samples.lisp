@@ -28,11 +28,31 @@
         
   (publish-static-content))
 
-(defmacro simple-macro (&body tags)
-  `(progn ,(car tags)))
-   
-(defun simple-fn ()
-  (simple-macro (print "abc")))
+(defun lisp->ps->js-with-html (people)
+  (cond
+    ((null people) nil)
+    (t
+     (with-list-output-ps-create-element
+         "td")
+;;     (format t "~a~%" (car people))
+;;     (lisp->ps->js-with-html (cdr people))
+     )))
+
+(defmacro with-list-output-ps-create-element (tag)
+  (let* ((tag-text (string tag))
+         (element-name (make-symbol (concatenate 'string "element" tag-text)))
+         (function-name (make-symbol (concatenate 'string "function" tag-text))))
+    `(ps (defun ,function-name ()
+           (let ((,element-name (chain document (create-element ,(string-downcase tag-text)))))
+             ,element-name)))))
+
+(defun test-lisp->ps-dhtml ()
+  (lisp->ps->js-with-html '(John Masami Matthew Mark)))
+
+(defmacro nexterly-use-data-macro (data)
+  `(ps
+     (defun nexter-fn ()
+       (alert ,(format nil "Hello, ~a!" data)))))
 
 (defmacro nexterly-macro (&body tags)
   (let* ((tag (caar tags))
@@ -64,6 +84,12 @@
   (next-macro
     '(tr)))
 
+(defmacro simple-macro (&body tags)
+  `(progn ,(car tags)))
+   
+(defun simple-fn ()
+  (simple-macro (print "abc")))
+
 (defun dynamic-list ()
   (let ((name "John"))
     (cons "name" name)))
@@ -82,54 +108,12 @@
     (let ((sample-div (chain document (get-element-by-id "sample-div" (string ,tags)))))
       sample-div)))
 
-(defun with-lisp-output-to-ps-fn ()
-  (ps
-    `(defun hard-coded-elements ()
-       (let ((sample-tr
-              (chain document (get-element-by-id
-                               (concatenate 'string
-                                            "sample" (symbol-to-js-string (car tags)))))))
-         sample-tr)))
-  (let ((name "John"))
-    (with-lisp-output-to-ps '(tr (td name)))))
-
   (defmacro with-lisp-output-to-js (&body tags)
     `(ps
        (defun hard-coded-elements ()
          (let ((sample-div (chain document (get-element-by-id "sample-div" (string ,tags)))))
            sample-div))))
-
-  (defun hard-coded-table ()
-    (ps
-      (defun hard-coded-table ()
-        (let ((sample-div (chain document (get-element-by-id "sample-div")))
-              (sample-td (chain document (create-element "td")))
-              (node (chain document (create-text-node "Name: John")))
-              (sample-tr (chain document (create-element "tr")))
-              (sample-table (chain document (create-element "table"))))
-          (chain sample-td (append-child node))
-          (chain sample-tr (append-child sample-td))
-          (chain sample-table (append-child sample-tr))
-          (chain sample-div (append-child sample-table))
-          (chain sample-td (set-attribute "color" "red;"))
-          sample-div)))))))
       
-(defun lisp->js-dom-fn-deep (tags &optional parent)
-  (cond
-    ((null tags) "")
-    ((atom tags) (string tags))
-    ((and (keywordp (car tags)) (stringp (cadr tags)))
-     ; sampleTd.setAttribute("style", "background-color: Green;")
-     (format nil "~a.setAttribute(=\"~a\", \"~a~a" (car tags) (cadr tags)
-             (lisp->js-html-fn-deep (cddr tags))))
-    (t
-     (if (and (atom (car tags)) (not (stringp (car tags))))
-         (format nil "<~a>~a</~a>"
-                 (car tags)(lisp->js-html-fn-deep (cdr tags)) (car tags))
-         (format nil "~a ~a"
-                 (lisp->js-html-fn-deep (car tags))
-                 (lisp->js-html-fn-deep (cdr tags)))))))
-
 (defun lisp->js-html-fn-deep (tags)
   (cond
     ((null tags) "")
@@ -310,12 +294,26 @@
                                                             (if acc
                                                                 (concatenate 'string acc #\Newline current-name)
                                                                 current-name))) ""))))
-                 (setf (chain document (get-element-by-id "names-textarea") value) serialized-names))))
+                 (setf (chain document (get-element-by-id "names-textarea") value) serialized-names)
+                 (render-name-list names))))
 
         (let ((o-req (new (-x-m-l-http-request))))
           (chain o-req (add-event-listener "load" req-listener))
           (chain o-req (open "GET" "/people"))
           (chain o-req (send)))))))
+
+(defun render-name-list ()
+  (ps
+    (defun render-name-list (names)
+      (chain names (map
+                    #'(lambda (name)
+                        (let ((sample-table (chain document (get-element-by-id "sample-table")))
+                              (sample-tr (chain document (create-element "tr")))
+                              (sample-td (chain document (create-element "td")))
+                              (sample-node (chain document (create-text-node (@ name name)))))
+                          (chain sample-td (append-child sample-node))
+                          (chain sample-tr (append-child sample-td))
+                          (chain sample-table (append-child sample-tr)))))))))
 
 (defun in-line-javascript ()
   (ps (defun name-list-handler (evt)
@@ -348,6 +346,8 @@
                    :href "/styles.css")
             (:script :type "text/javascript"
                      (str (stringify
+                           (nexterly-fn)
+                           (render-name-list)
                            (get-name-list)
                            (in-line-javascript)))))
            (:body
@@ -363,6 +363,7 @@
                    (:button :id "get-names-btn" "Get Names")
                    (:br)
                    (:textarea :id "names-textarea" :placeholder "Names Listed here" :style "height:100px;width:300px;")
+                   (:table :id "sample-table")
                    )))))))
 
 (define-easy-handler (sample-page :uri "/sample") ()
