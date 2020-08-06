@@ -302,7 +302,27 @@
           (chain o-req (open "GET" "/people"))
           (chain o-req (send)))))))
 
+(defmacro+ps render-name-list->js&html-table (list-name)
+  (let ((table-name (make-symbol (concatenate 'string list-name "-table")))
+        (row-name (make-symbol (concatenate 'string list-name "-row")))
+        (cell-name (make-symbol (concatenate 'string list-name "-cell")))
+        (text-node-name (make-symbol (concatenate 'string list-name "-text-node"))))
+;;    `(ps
+    `(defun render-name-list (names)
+         (chain names (map
+                       #'(lambda (name)
+                           (let ((,table-name (chain document (get-element-by-id "sample-table")))
+                                 (,row-name (chain document (create-element "tr")))
+                                 (,cell-name (chain document (create-element "td")))
+                                 (,text-node-name (chain document (create-text-node (@ name name)))))
+                             (chain ,cell-name (append-child ,text-node-name))
+                             (chain ,row-name (append-child ,cell-name))
+                             (chain ,table-name (append-child ,row-name)))))))));)
+
 (defun render-name-list ()
+  (ps (render-name-list->js&html-table "my-names")))
+
+(defun render-name-list1 ()
   (ps
     (defun render-name-list (names)
       (chain names (map
