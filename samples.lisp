@@ -28,6 +28,36 @@
         
   (publish-static-content))
 
+(defmacro run-code (code)
+  `(progn
+     ,code))
+
+;;* Syntax Idea
+'(jsx-macro ; added quote so it's not compiled
+ (tr (td style "color:green;" (ps (alert "hello!"))))) ; only insert parenscript??
+
+(defun process-element (element)
+  (let ((tag (car element)))
+    (flet
+        ((append-child-element (tag child-element)
+                                        ;`(ps
+           `(chain ,tag (append-child ,child-element))));)
+      (mapcar
+       #'(lambda (element-part)
+           (cond
+             ((listp element-part)
+              (append-child-element tag (process-element element-part)))
+             ((symbolp element-part)
+                                        ;`(ps
+              `(chain document (create-element ,element-part)));)
+             ((equal 'ps element-part) `(ps (cdr ,element-part))) ; assumes ps was detected as a list so this is now the "ps element"
+             ((stringp element-part)
+               ; same as above ... + could be attribute value
+              (append-child-element tag; `(ps
+                                    `(chain document (create-text-node ,element-part)));)
+              )))
+       element))))
+
   (defmacro lisp->js&html-macro-deep (&body tags)
     (cond
       ((null tags) ())
