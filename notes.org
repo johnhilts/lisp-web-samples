@@ -71,7 +71,7 @@ sampleDiv.appendChild(sampleTable)
 - (tr :style "my-style" (td :style "my-style" name) (td :style "my-style" age)) <-- make attributes keywords, and text are strings
   - go through each element in the list ...
     - (car list) - create element!
-    - (keywordp & atom) - add attribute! (syntax: sampleTd.setAttribute("style", "background-color: Green;"))
+sampleTd.setAttribute("style", "background-color: Green;"))
     - (stringp & atom) - create text node! (to current element)
     - (listp) - recursive call! then add to current element!
 
@@ -83,7 +83,53 @@ sampleDiv.appendChild(sampleTable)
                                         ;    ||#
 
 * what code might look like
-** what we can do today
-(ps
-(let ((people (get-people-list)))
-))
+** what we can do today with ps
+#+BEGIN_SRC 
+(defun render-name-list ()
+  (ps
+    (defun render-name-list (names)
+      (chain names (map
+                    #'(lambda (name)
+                        (let ((sample-table (chain document (get-element-by-id "sample-table")))
+                              (sample-tr (chain document (create-element "tr")))
+                              (sample-td (chain document (create-element "td")))
+                              (sample-node (chain document (create-text-node (@ name name)))))
+                          (chain sample-td (append-child sample-node))
+                          (chain sample-tr (append-child sample-td))
+                          (chain sample-table (append-child sample-tr)))))))))
+#+END_SRC
+
+* example of lisp macro (using ps - with wrapper fn)
+#+BEGIN_SRC lisp
+(defmacro nexterly-macro (&body tags)
+  (let* ((tag (caar tags))
+         (tag-text (string tag))
+         (element-name (make-symbol (concatenate 'string "element" tag-text))))
+    `(ps
+       (defun nexter-fn ()
+         (let ((,element-name (chain document (create-element ,(string-downcase tag-text)))))
+           ,element-name)))))
+   
+(defun nexterly-fn ()
+  (nexterly-macro
+    (tr)))
+#+END_SRC
+
+* Ideas in English
+** Given
+(tr (td :style "color:green" "John"))
+** Produce JS:
+(defun lisp->js&html
+(cond
+((listp (car tags) (lisp->js&html (car tags) (cdr tags)))
+((atom (car tags))
+ create element
+ append to parent (how??)
+   maybe return multiple values with a flag "needs parent"??
+  OR, we could return the created element and the receive could maybe check?
+myObject instanceOf Element => returns boolean
+)))
+
+* Syntax Idea
+(jsx-macro
+ (tr (td style "color:green;" (ps (alert "hello!"))))) ; only insert parenscript??

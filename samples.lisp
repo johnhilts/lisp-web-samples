@@ -28,6 +28,42 @@
         
   (publish-static-content))
 
+  (defmacro lisp->js&html-macro-deep (&body tags)
+    (cond
+      ((null tags) ())
+      ((and (keywordp (car tags)) (stringp (cadr tags)))
+       (list (car tags) (cadr tags)))
+      ;; need to go through the rest of the list: (lisp->js-html-fn-deep (cddr tags))))
+      ;; ((atom tags) (string tags))
+      (t
+       (if (and (atom (car tags)) (not (stringp (car tags))))
+           (let* ((tag (caar tags))
+                  (tag-text (string tag))
+                  (element-name (make-symbol (concatenate 'string "element" tag-text))))
+             `(ps (let ((,element-name (chain document (create-element (car tags)))))
+                    ,element-name)))
+           ;; need to keep going: (lisp->js-html-fn-deep (cdr tags)) (car tags))
+           (progn
+             `(ps (lisp->js&html-fn-deep (car tags))
+                  (lisp->js&html-fn-deep (cdr tags))))))))
+
+(defun lisp->js&html-fn-deep (tags)
+  (cond
+    ((null tags) ())
+    ((atom tags)
+     (string tags))
+    ((and (keywordp (car tags)) (stringp (cadr tags)))
+     (list (car tags) (cadr tags)))
+    ;; need to go through the rest of the list: (lisp->js-html-fn-deep (cddr tags))))
+    (t
+     (if (and (atom (car tags)) (not (stringp (car tags))))
+         (ps (let ((sample-element (chain document (create-element (car tags)))))
+               sampleElement))
+         ;; need to keep going: (lisp->js-html-fn-deep (cdr tags)) (car tags))
+         (progn
+           (lisp->js&html-fn-deep (car tags))
+           (lisp->js&html-fn-deep (cdr tags)))))))
+
 (defun lisp->ps->js-with-html (people)
   (cond
     ((null people) nil)
@@ -186,7 +222,7 @@
     (print-js-string '((td name) (td age)))
     (print-js-string '(label age))))
 
-(defun js-html->dom-reduce-fn1 (tags)
+(defun js-html->dom-reduce-fn (tags)
   (labels
       ((create-open-tag (tag)
          (let ((tag-text (string-downcase tag)))
