@@ -36,6 +36,34 @@
 '(jsx-macro ; added quote so it's not compiled
  (tr (td style "color:green;" (ps (alert "hello!"))))) ; only insert parenscript??
 
+(defmacro process-tag-experiment (&body elements)
+  (let ((element-tag (string-downcase (car (car elements)))))
+    `(ps
+       (defun process-tag (element-tag)
+         (let ((element (chain document (create-element element-tag))))
+           (chain element (set-attribute "id" (concatenate 'string element-tag "1234")))
+           element))
+       (process-tag ,element-tag))))
+
+(defun cons-pair-p (possible-cons)
+  (and (consp possible-cons) (atom (cdr possible-cons))))
+
+(defun process-tag-map-experiment ()
+  (let* ((element '(td (style . "color:green;") "John"))
+         (tag (car element)))
+    (mapcar
+     #'(lambda (e)
+         (cond
+           ((cons-pair-p e)
+            (format t "~&~a.setAttribute(~a, ~a)~%" tag (car e) (cdr e)))
+           ((stringp e) (format t "createTextNode(~a)~%append to parent: ~a" e tag))
+           ((listp e)
+            (format t "~&recursive call with ~a~&~a.appendChild(~a)" e tag e))))
+     (cdr element))))
+
+(defun test-process-tag-experiment ()
+  (process-tag-experiment (td)))
+
 (defun process-element (element)
   (let ((tag (car element)))
     (macrolet
