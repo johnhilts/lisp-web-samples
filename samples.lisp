@@ -38,24 +38,29 @@
 
 (defun process-element (element)
   (let ((tag (car element)))
-    (flet
+    (macrolet
         ((append-child-element (tag child-element)
                                         ;`(ps
-           `(chain ,tag (append-child ,child-element))));)
+           `(chain ,tag (append-child ,child-element))))
       (mapcar
        #'(lambda (element-part)
            (cond
              ((listp element-part)
-              (append-child-element tag (process-element element-part)))
+              (let ((child-element (process-element element-part))
+                    (some-js (append-child-element tag child-element)))
+                (ps some-js)))
              ((symbolp element-part)
                                         ;`(ps
               `(chain document (create-element ,element-part)));)
              ((equal 'ps element-part) `(ps (cdr ,element-part))) ; assumes ps was detected as a list so this is now the "ps element"
+             #||
              ((stringp element-part)
-               ; same as above ... + could be attribute value
-              (append-child-element tag; `(ps
-                                    `(chain document (create-text-node ,element-part)));)
-              )))
+                                        ; same as above ... + could be attribute value
+              `(append-child-element ,tag; `(ps
+                                     (ps (chain document (create-text-node ,element-part))))
+              )
+||#
+))
        element))))
 
   (defmacro lisp->js&html-macro-deep (&body tags)
