@@ -45,21 +45,73 @@
            element))
        (process-tag ,element-tag))))
 
+(defmacro process-tag-set-attribute-experiment (element-tag attribute)
+  (let* ((tag (string-downcase (cadr element-tag)))
+         (attribute-key (string (caadr attribute)))
+         (attribute-value (cdadr attribute)))
+    `(ps
+       (defun process-tag-set-attribute (element-tag attribute-key attribute-value)
+         (let ((element (chain document (get-element-by-id element-tag))))
+           (chain element (set-attribute attribute-key attribute-value))
+           element))
+       (process-tag-set-attribute ,tag ,attribute-key ,attribute-value))))
+
+(defun process-tag-set-attribute-experiment-fn (element-tag attribute)
+  (let* ((tag (string-downcase element-tag))
+         (attribute-key (string (car attribute)))
+         (attribute-value (cdr attribute)))
+    (list tag attribute-key attribute-value)))
+
+(defun test-process-tag-set-attribute-experiment ()
+  (let* ((element '(td (style . "color:green;") "John"))
+         (tag (car element))
+         (attribute (cadr element)))
+    (process-tag-set-attribute-experiment tag attribute)))
+
+(defmacro attribute-experiment-no-parsing (element-tag attribute-key attribute-value)
+  `(ps
+     (defun process-tag-set-attribute (element-tag attribute-key attribute-value)
+       (let ((element (chain document (get-element-by-id element-tag))))
+         (chain element (set-attribute attribute-key attribute-value))
+         element))
+     (process-tag-set-attribute ,element-tag ,attribute-key ,attribute-value)))
+;  `(ps  "~a.setAttribute(~s ~s)" ,tag ,attribute-key ,attribute-value))
+
+(defun test-attribute-experiment-no-parsing ()
+  (attribute-experiment-no-parsing "td" "style" "color:black;"))
+
+(defmacro attribute-experiment (&body element)
+  (let* ((tag (string (car (car element)))))
+  `(format t "~a" ,tag)))
+
+(defun test-attribute-experiment ()
+  (attribute-experiment (td (style . "color:green;") "John")))
+
 (defun cons-pair-p (possible-cons)
   (and (consp possible-cons) (atom (cdr possible-cons))))
 
 (defun process-tag-map-experiment ()
-  (let* ((element '(td (style . "color:green;") "John"))
-         (tag (car element)))
-    (mapcar
-     #'(lambda (e)
-         (cond
-           ((cons-pair-p e)
-            (format t "~&~a.setAttribute(~a, ~a)~%" tag (car e) (cdr e)))
-           ((stringp e) (format t "createTextNode(~a)~%append to parent: ~a" e tag))
-           ((listp e)
-            (format t "~&recursive call with ~a~&~a.appendChild(~a)" e tag e))))
-     (cdr element))))
+  (labels
+      ((process-tag-r (element)
+         (let ((tag (car element)))
+           (format t "~&createElement(~s)" (string tag))
+           (progn
+           (process-tag-experiment (list element))
+           (mapcar
+            #'(lambda (e)
+                (cond
+                  ((cons-pair-p e)
+                   (format t "~&~a.setAttribute(~s, ~s)~%" tag (string (car e)) (string (cdr e)))
+                   (process-tag-set-attribute-experiment (list tag) (list (list e))))
+                  ((stringp e) (format t "createTextNode(~s)~%append to parent: ~a~&" e tag))
+                  ((listp e)
+                   (format t "~&recursive call with ~a++~&~a.appendChild(~a)...~&" e tag e)
+                   (process-tag-r e)
+                   (format t "~&~a.appendChild(~a)~%" tag e))))
+            (cdr element)))
+           )))
+    (let ((element '(tr (td (style . "color:green;") "John"))))
+      (process-tag-r element))))
 
 (defun test-process-tag-experiment ()
   (process-tag-experiment (td)))
