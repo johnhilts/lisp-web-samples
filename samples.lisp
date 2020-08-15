@@ -36,8 +36,33 @@
 '(jsx-macro ; added quote so it's not compiled
  (tr (td style "color:green;" (ps (alert "hello!"))))) ; only insert parenscript??
 
-(defmacro process-tag-experiment (&body elements)
-  (let ((element-tag (string-downcase (car (car elements)))))
+(defun lisp->ps (html-elements)
+  "Process each Lisp element and pass it to an appropriate parenscript function"
+  (let ((tag (car html-elements)))
+    (cond
+      ((null html-elements) "")
+      ((cons-pair-p html-elements) (format t "~&Looking at attribute: ~a~%" html-elements))
+      (t
+       (format t "~&createElement(~s)~%" (string tag))
+       (format t "macro output: ~a" (process-tag-experiment tag))       
+       (mapcar
+        #'(lambda (element)
+            (format t "~&Looking at: ~a~%" element)
+            (cond
+              ((stringp element) (format t "createTextNode(~s)~%append to parent: ~a~&" element tag))
+              ((listp element) (lisp->ps element))))
+        (cdr html-elements))))))
+
+(defmacro with-lisp-output-ps-experiment (&body html)
+  "turn form into a list; pass it to functions to operate on"
+  `(lisp->ps ',@html))
+
+(defun test-with-lisp-output-ps-experiment ()
+  (with-lisp-output-ps-experiment
+      (tr (td (style . "color-green;") "John"))))
+
+(defmacro process-tag-experiment (tag)
+  (let ((element-tag (string-downcase tag)))
     `(ps
        (defun process-tag (element-tag)
          (let ((element (chain document (create-element element-tag))))
