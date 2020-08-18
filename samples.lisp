@@ -44,7 +44,7 @@
       ((cons-pair-p html-elements) (format t "~&Looking at attribute: ~a~%" html-elements))
       (t
        (format t "~&createElement(~s)~%" (string tag))
-       (format t "macro output: ~a" (process-tag-experiment tag))       
+       (format t "macro output: ~a" (process-tag-experiment tag))
        (mapcar
         #'(lambda (element)
             (format t "~&Looking at: ~a~%" element)
@@ -59,10 +59,112 @@
 
 (defun test-with-lisp-output-ps-experiment ()
   (with-lisp-output-ps-experiment
-      (tr (td (style . "color-green;") "John"))))
+    (tr (td (style . "color-green;") "John"))))
 
-(defmacro process-tag-experiment (tag)
+
+(defun cons-pair-p (possible-cons)
+  (and (consp possible-cons) (atom (cdr possible-cons)) (not (null (cdr possible-cons)))))
+
+(ps
+  (defmacro process-tag-set-attribute-experiment (element-tag attribute)
+    (format t "~&Looking at attribute elements; tag: ~a, attribute: ~a" element-tag attribute)
+    (let* ((tag (string-downcase element-tag))
+           (attribute-key (string (caadr attribute)))
+           (attribute-value (cdadr attribute)))
+      `(ps
+         (defun process-tag-set-attribute (element-tag attribute-key attribute-value)
+           (let ((element (chain document (get-element-by-id element-tag))))
+             (chain element (set-attribute attribute-key attribute-value))
+             element))
+         (process-tag-set-attribute ,tag ,attribute-key ,attribute-value)))))
+
+
+(defmacro process-tag-set-attribute-experiment (element-tag attribute)
+  (format t "~&Looking at attribute elements; tag: ~a, attribute: ~a" element-tag attribute)
+  (let* ((tag (string-downcase element-tag))
+         (attribute-key (string (caadr attribute)))
+         (attribute-value (cdadr attribute)))
+    `(ps (defun process-tag-set-attribute (element-tag attribute-key attribute-value)
+           (let ((element (chain document (get-element-by-id element-tag))))
+             (chain element (set-attribute attribute-key attribute-value))
+             element))
+         (process-tag-set-attribute ,tag ,attribute-key ,attribute-value))))
+
+
+(defun test-process-tag-set-attribute-experiment ()
+  (let ((tag (string-downcase 'tr))
+        (attribute '(style . "color:purple;")))
+    (process-tag-set-attribute-experiment tag (list attribute))))
+
+(defmacro interpolate-html-elements-from-lisp-form (&body elements)
+  (format t "~&elements: ~a~%" elements)
+  (labels
+      ((parse-it (element)
+         (format t "~&element: ~a~%" element)
+         (cond
+           ((cons-pair-p element)
+            (list (string-downcase (car element)) (cdr element)))
+           (t element))))
+    `(let ((parsed-elements ,@(mapcar #'parse-it (car elements))))
+       parsed-elements)))
+
+(defun test-interpolate-html-elements-from-lisp-form ()
+  (interpolate-html-elements-from-lisp-form
+   (ps (tr (td (style . "color:purple;") "John")))))
+
+(ps
+  (defmacro test-ps-macro (tags)
+    "This works pretty well, but doesn't do the recursion logic as well for the parent element
+Use (test-the-ps-macro) to call it, or check the output in the repl from the formats when compiling (test-the-ps-macro) "
+    (format t "~&*** starting with ~a ***~%" tags)
+    (labels
+        ((parse-it (e)
+           (let* ((tag e)
+                  (parse-it-r
+                   #'(lambda (e)
+                       (format t "~&Looking at elements in ~a~%" tag)
+                       (cond
+                         ((null e) "")
+                         ((stringp e)
+                          (format t "~&~s is a string" e)
+                          (string e))
+                         ((cons-pair-p e)
+                          (format t "~&Looking at attribute: ~a~%" e)
+                          ;;(format t "~&Output from attribute-set: ~a~%" (process-tag-set-attribute-experiment tag (list (list e)))))
+                          (format t "~&Output from attribute-set: ~s~%" `(ps (set-an-attribute ,tag ,(string (car e)) ,(string (cdr e)))))
+                          (format t "~&tag: ~a, (car e): ~s, (cdr e): ~s~%" tag (string (car e)) (string (cdr e))))
+                         ((atom e)
+                          (format t "~&~a is an atom" e)
+                          (string e))
+                         ((listp e)
+                          (format t "~&~a is a list (make recursive call)" e)
+                          (parse-it (car e))
+                          (parse-it (cdr e)))))))
+             (funcall parse-it-r e))))
+      `(let ((parsed-tags ,@(mapcar #'parse-it tags)))
+         parsed-tags))))
+    
+(defun test-the-ps-macro ()
+  (ps
+    (test-ps-macro
+     (tr (td (style . "color:green;") "John") (td "Bill")))
+    (test-ps-macro
+     (td (style . "color: red;") "John")))))
+
+(defmacro simple-macro (tag)
+  (let* ((element-tag `(string-downcase ,tag))
+        (ps-commands 
+         `(
+           (defun process-tag (element-tag)
+             (let ((element (chain document (create-element element-tag))))
+               (chain element (set-attribute "id" (concatenate 'string element-tag "1234")))
+               element))
+           (process-tag ,element-tag))))
+    `(ps ,@ps-commands)))
+    
+(defpsmacro process-tag-experiment (tag)
   (let ((element-tag (string-downcase tag)))
+    (format t "~&inside macro: ~a~%" element-tag)
     `(ps
        (defun process-tag (element-tag)
          (let ((element (chain document (create-element element-tag))))
@@ -116,18 +218,20 @@
   (and (consp possible-cons) (atom (cdr possible-cons))))
 
 (defun process-tag-map-experiment ()
+  "This has the recursion logic down well!
+Test it by just calling it: (process-tag-map-experiment)"
   (labels
       ((process-tag-r (element)
          (let ((tag (car element)))
            (format t "~&createElement(~s)" (string tag))
            (progn
-           (process-tag-experiment (list element))
+             ;(process-tag-experiment (list element))
            (mapcar
             #'(lambda (e)
                 (cond
                   ((cons-pair-p e)
-                   (format t "~&~a.setAttribute(~s, ~s)~%" tag (string (car e)) (string (cdr e)))
-                   (process-tag-set-attribute-experiment (list tag) (list (list e))))
+                   (format t "~&~a.setAttribute(~s, ~s)~%" tag (string (car e)) (string (cdr e))))
+                   ;(process-tag-set-attribute-experiment (list tag) (list (list e))))
                   ((stringp e) (format t "createTextNode(~s)~%append to parent: ~a~&" e tag))
                   ((listp e)
                    (format t "~&recursive call with ~a++~&~a.appendChild(~a)...~&" e tag e)
@@ -139,7 +243,7 @@
       (process-tag-r element))))
 
 (defun test-process-tag-experiment ()
-  (process-tag-experiment (td)))
+  (ps (process-tag-experiment (td))))
 
 (defun process-element (element)
   (let ((tag (car element)))
