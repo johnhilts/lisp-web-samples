@@ -217,6 +217,70 @@ Use (test-the-ps-macro) to call it, or check the output in the repl from the for
 (defun cons-pair-p (possible-cons)
   (and (consp possible-cons) (atom (cdr possible-cons))))
 
+(defmacro process-tag-map-experiment-elements-only (element)
+  "**ELEMENTS ONLY VERSION** This has the recursion logic down well!
+Test it by just calling it: (test-process-tag-map-experiment-macro)"
+  (labels
+      ((process-tag-r (element) ;; make an optional parent tag parameter
+         (let ((tag (car element)))
+           `(append (list ,(string tag))
+                    ,@(mapcar
+                    #'(lambda (e)
+                        (cond
+                          ((cons-pair-p e)
+                           (let ((attribute-key (string (car e)))
+                                 (attribute-value (string (cdr e))))
+                             `(list ,attribute-key ,attribute-value)))
+                          ((stringp e)
+                           `(list ,e))
+                          ((listp e)
+                           (process-tag-r e)
+                           )))
+                    (cdr element)))
+           )))
+    (process-tag-r element)))
+
+(defun test-process-tag-map-experiment-elements-only ()
+  (list (process-tag-map-experiment-elements-only
+   (tr (td (style . "color:green;") "John")  (td "Bill")))))
+
+(defmacro process-tag-map-experiment-macro1 (element)
+  "**MACRO VERSION** This has the recursion logic down well!
+Test it by just calling it: (test-process-tag-map-experiment-macro)"
+  (labels
+      ((process-tag-r (element) ;; make an optional parent tag parameter
+         (let ((tag (car element)))
+           (format t "~&createElement(~s)" (string tag))
+           (format t "~&Output from ps:~%~s~%"
+                   `(ps (create-an-element parent-element ,(string tag))))
+           (append `(ps (create-an-element parent-element ,(string tag)))
+                    (mapcar
+                       #'(lambda (e)
+                           (cond
+                             ((cons-pair-p e)
+                              (let ((attribute-key (string (car e)))
+                                    (attribute-value (string (cdr e))))
+                                (format t "~&Output from ps:~%~s~%"
+                                        `(ps (set-an-attribute parent-element ,attribute-key ,attribute-value)))
+                                `(ps (set-an-attribute parent-element ,attribute-key ,attribute-value))))
+                             ((stringp e)
+                              (format t "~&Output from ps:~%~s~%"
+                                      `(set-text-node parent-element ,e))
+                              `(ps (set-text-node parent-element ,e)))
+                             ((listp e)
+                              (format t "~&recursive call with ~a++~&~a.appendChild(~a)...~&" e tag e)
+                              (format t "~&~a.appendChild(~a)~%" tag e)
+                              (process-tag-r e)
+                              )))
+                       (cdr element)))
+           )))
+    (format t "~&** STARTING again! **~%")
+    (process-tag-r element)))
+
+(defun test-process-tag-map-experiment-macro ()
+   (process-tag-map-experiment-macro1
+       (tr (td (style . "color:green;") "John") (td "Bill"))))
+
 (defun process-tag-map-experiment ()
   "This has the recursion logic down well!
 Test it by just calling it: (process-tag-map-experiment)"
