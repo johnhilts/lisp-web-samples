@@ -244,13 +244,47 @@ Test it by just calling it: (test-process-tag-map-experiment-macro)"
   (list (process-tag-map-experiment-elements-only
    (tr (td (style . "color:green;") "John")  (td "Bill")))))
 
+#||
+"function createElements(parentElement) {
+    var trElement123 = createAnElement(parentElement, 'tr');
+    var tdElement456 = createAnElement(trElement123, 'td');
+    setAnAttribute(tdElement456, 'STYLE', 'color:green;');
+    setTextNode(tdElement456, 'John');
+    var tdElement789 = createAnElement(trElement123, 'td');
+    setTextNode(tdElement789, 'Bill');
+    return trElement123
+};"
+||#
+
+(defmacro with-very-hard-coded-version (element)
+  (ps
+    (defun create-elements (parent-element)
+      (let ((trElement (create-an-element parent-element "tr")))
+        parent-element))))
+
+(defmacro with-hard-coded-version (element)
+  `(progn
+     ,@(list
+        `(ps
+          (defun create-elements (parent-element)
+            (let* ((tr-element (create-an-element parent-element ,(string (car element))))
+                   (td-element (create-an-element tr-element ,(string (caadr element)))))
+              (set-attribute td-element ,(string (car (cadadr element))) ,(cdr (cadadr element)))
+              (set-text-node td-element ,(car (cddadr element)))
+              parent-element))))))
+
+(defun test-with-hard-coded-version ()
+  (with-hard-coded-version
+      (tr (td (style . "color:green;") "John") (td "Bill"))))
+
 (defmacro process-tag-map-experiment-macro1 (element)
   "**MACRO VERSION** This has the recursion logic down well!
 Test it by just calling it: (test-process-tag-map-experiment-macro)"
   (labels
       ((process-tag-r (element) ;; make an optional parent tag parameter
          (let ((tag (car element)))
-           (append `(create-an-element parent-element ,(string tag))
+           (append (list `(let ((element-tag ,(string tag)))
+                      (create-an-element parent-element element-tag)))
                    (mapcar
                     #'(lambda (e)
                         (cond
