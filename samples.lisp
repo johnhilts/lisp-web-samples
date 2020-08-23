@@ -269,9 +269,13 @@ Test it by just calling it: (test-process-tag-map-experiment-macro)"
           (defun create-elements (parent-element)
             (let* ((tr-element (create-an-element parent-element ,(string (car element))))
                    (td-element (create-an-element tr-element ,(string (caadr element)))))
-              (set-attribute td-element ,(string (car (cadadr element))) ,(cdr (cadadr element)))
+              (set-attribute td-element ,(string-downcase (car (cadadr element))) ,(cdr (cadadr element)))
               (set-text-node td-element ,(car (cddadr element)))
               parent-element))))))
+
+(defmacro with-preserved-casing (var)
+  `(let ((symbol-with-preserved-casing (make-symbol (string ,var))))
+     symbol-with-preserved-casing))
 
 (defun test-with-hard-coded-version ()
   (with-hard-coded-version
