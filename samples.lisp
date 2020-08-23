@@ -274,7 +274,7 @@ Test it by just calling it: (test-process-tag-map-experiment-macro)"
               parent-element))))))
 
 (defmacro with-preserved-casing (var)
-  `(let ((symbol-with-preserved-casing (make-symbol (string ,var))))
+  `(let ((symbol-with-preserved-casing (make-symbol (string ,(car var)))))
      symbol-with-preserved-casing))
 
 (defun test-with-hard-coded-version ()
