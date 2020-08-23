@@ -273,6 +273,27 @@ Test it by just calling it: (test-process-tag-map-experiment-macro)"
               (set-text-node td-element ,(car (cddadr element)))
               parent-element))))))
 
+(defmacro with-hard-coded-version-faux-recursion (element)
+  (labels ((some-local-function (sub-element)
+             `(defun create-more-elements (parent-element)
+                (let ((td-element (create-an-element parent-element ,(string (caadr element)))))
+                  (set-text-node td-element ,sub-element)
+                  td-element))))
+    `(progn
+       ,@(list
+          `(ps
+             (defun create-elements (parent-element)
+               (let* ((tr-element (create-an-element parent-element ,(string (car element))))
+                      (td-element (create-an-element tr-element ,(string (caadr element)))))
+                 (set-attribute td-element ,(string-downcase (car (cadadr element))) ,(cdr (cadadr element)))
+                 (set-text-node td-element ,(car (cddadr element)))
+                 ,(some-local-function (car (cdaddr element)))
+                 parent-element)))))))
+
+(defun test-with-hard-coded-version-faux-recursion ()
+  (with-hard-coded-version-faux-recursion
+      (tr (td (style . "color:green;") "John") (td "Bill"))))
+
 (defmacro with-preserved-casing (var)
   `(let ((symbol-with-preserved-casing (make-symbol (string ,(car var)))))
      symbol-with-preserved-casing))
