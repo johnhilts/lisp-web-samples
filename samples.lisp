@@ -290,6 +290,38 @@ Test it by just calling it: (test-process-tag-map-experiment-macro)"
                  ,(some-local-function (car (cdaddr element)))
                  parent-element)))))))
 
+(defmacro with-html-elements (elements)
+  "
+input: html elements as sexprs
+output: javascript that creates the elements in DOM based on the sexprs
+"
+  (labels
+      ((process-tag-r (element) ;; make an optional parent tag parameter
+         (let ((tag (car element)))
+           (cons
+            `(let ((element-tag ,(string tag)))
+               (create-an-element parent-element element-tag))
+            (mapcar
+             #'(lambda (e)
+                 (cond
+                   ((cons-pair-p e)
+                    `(let ((attribute-key ,(string (car e)))
+                           (attribute-value ,(string (cdr e))))
+                       (set-an-attribute parent-element attribute-key attribute-value)))
+                   ((stringp e)
+                    `(let ((text ,e))
+                       (set-text-node parent-element text)))
+                   ((listp e)
+                    `(progn
+                       ,@(process-tag-r e)))))
+             (cdr element))))))
+    `(ps (defun create-elements (parent-element) ,@(process-tag-r elements)))))
+;;    `(progn ,@(list `(ps (defun create-elements (parent-element) ,@(process-tag-r elements)))))))
+
+(defun test-with-html-elements ()
+(with-html-elements
+    (tr (td (style . "color:green;") "John") (td "Bill"))))
+
 (defun test-with-hard-coded-version-faux-recursion ()
   (with-hard-coded-version-faux-recursion
       (tr (td (style . "color:green;") "John") (td "Bill"))))
