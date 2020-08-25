@@ -296,11 +296,12 @@ input: html elements as sexprs
 output: javascript that creates the elements in DOM based on the sexprs
 "
   (labels
-      ((process-tag-r (element) ;; make an optional parent tag parameter
+      ((process-tag-r (element &optional (parent nil parent-supplied-p))
          (let* ((tag (car element))
-                (parent-element (make-symbol (concatenate 'string (string-downcase tag) "Element"))))
+                (parent-element (gensym (concatenate 'string (string-downcase tag) "Element")))
+                (parent-element-parameter (if parent-supplied-p parent (make-symbol "parent-element"))))
            (cons
-            `(let ((,parent-element (create-an-element parent-element ,(string tag)))))
+            `(let ((,parent-element (create-an-element ,parent-element-parameter ,(string tag)))))
             (mapcar
              #'(lambda (e)
                  (cond
@@ -310,13 +311,18 @@ output: javascript that creates the elements in DOM based on the sexprs
                     `(set-text-node ,parent-element ,e))
                    ((listp e)
                     `(progn
-                       ,@(process-tag-r e)))))
+                       ,@(process-tag-r e parent-element)))))
              (cdr element))))))
-    `(ps (defun create-elements (parent-element) ,@(process-tag-r elements)))))
+    `(ps
+       (defun create-elements (parent-element)
+         ,@(process-tag-r elements)
+         parent-element)
+       (let ((parent-element (chain document (get-element-by-id "parent123"))))
+         (create-elements parent-element)))))
 
 (defun test-with-html-elements ()
   (with-html-elements
-      (tr (td (style . "color:green;") "John") (td "Bill"))))
+      (table (tr (td (style . "color:green;") "John") (td "Bill")))))
 
 (defun test-with-hard-coded-version-faux-recursion ()
   (with-hard-coded-version-faux-recursion
