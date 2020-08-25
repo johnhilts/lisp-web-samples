@@ -297,30 +297,26 @@ output: javascript that creates the elements in DOM based on the sexprs
 "
   (labels
       ((process-tag-r (element) ;; make an optional parent tag parameter
-         (let ((tag (car element)))
+         (let* ((tag (car element))
+                (parent-element (make-symbol (concatenate 'string (string-downcase tag) "Element"))))
            (cons
-            `(let ((element-tag ,(string tag)))
-               (create-an-element parent-element element-tag))
+            `(let ((,parent-element (create-an-element parent-element ,(string tag)))))
             (mapcar
              #'(lambda (e)
                  (cond
                    ((cons-pair-p e)
-                    `(let ((attribute-key ,(string (car e)))
-                           (attribute-value ,(string (cdr e))))
-                       (set-an-attribute parent-element attribute-key attribute-value)))
+                    `(set-an-attribute ,parent-element ,(string (car e))  ,(string (cdr e))))
                    ((stringp e)
-                    `(let ((text ,e))
-                       (set-text-node parent-element text)))
+                    `(set-text-node ,parent-element ,e))
                    ((listp e)
                     `(progn
                        ,@(process-tag-r e)))))
              (cdr element))))))
     `(ps (defun create-elements (parent-element) ,@(process-tag-r elements)))))
-;;    `(progn ,@(list `(ps (defun create-elements (parent-element) ,@(process-tag-r elements)))))))
 
 (defun test-with-html-elements ()
-(with-html-elements
-    (tr (td (style . "color:green;") "John") (td "Bill"))))
+  (with-html-elements
+      (tr (td (style . "color:green;") "John") (td "Bill"))))
 
 (defun test-with-hard-coded-version-faux-recursion ()
   (with-hard-coded-version-faux-recursion
