@@ -321,8 +321,8 @@ output: javascript that creates the elements in DOM based on the sexprs
          (create-elements parent-element)))))
 
 (defun test-with-html-elements ()
-  (with-html-elements
-      (table (tr (td (style . "color:green;") "John") (td "Bill")))))
+(with-html-elements
+    (table (tr (td (style . "color:green;") "John") (td (onclick . "testClickHandler()") "Bill")))))
 
 (defun test-with-hard-coded-version-faux-recursion ()
   (with-hard-coded-version-faux-recursion
