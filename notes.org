@@ -133,3 +133,33 @@ myObject instanceOf Element => returns boolean
 * Syntax Idea
 (jsx-macro
  (tr (td style "color:green;" (ps (alert "hello!"))))) ; only insert parenscript??
+
+function createElements(parentElement) {
+    var tableElement796 = createAnElement(parentElement, \"TABLE\");\n    var trElement797 = createAnElement(tableElement796, \"TR\");\n    var tdElement798 = createAnElement(trElement797, \"TD\");\n    setAnAttribute(tdElement798, \"STYLE\", \"color:green;\");\n    setTextNode(tdElement798, \"John\");\n    var tdElement799 = createAnElement(trElement797, \"TD\");\n    setAnAttribute(tdElement799, \"ONCLICK\", \"testClickHandler()\");\n    setTextNode(tdElement799, \"Bill\");\n    __PS_MV_REG = [];\n    return parentElement;\n};\n(function () {\n    var parentElement = document.getElementById(\"parent123\");\n    __PS_MV_REG = [];\n    return createElements(parentElement);\n})();";
+
+function renderTodoList() {
+    var todoListDiv = document.getElementById("todo-list");
+    return todoList.map(function (todo) {
+        __PS_MV_REG = [];
+        return "function createElements(parentElement) {
+                  var trElement815 = createAnElement(parentElement, \"TR\");
+                  var tdElement816 = createAnElement(trEle\ment815, \"TD\");
+                  setTextNode(tdElement816, todo);
+                  return parentElement;
+                };
+                var parentElement = document.getElementById(\"todo-list\\");
+                createElements(parentElement);";
+    });
+};
+
+// what it should look like...
+function renderTodoList() {
+    var todoListDiv = document.getElementById("todo-list");
+    return todoList.map(function (todo) { <-- maybe put this part into the macro??
+           var parentElement = document.getElementById("whatever the parent Id is");
+           var trElement815 = createAnElement(parentElement, \"TR\");
+           var tdElement816 = createAnElement(trEle\ment815, \"TD\");
+           setTextNode(tdElement816, todo);
+           // I don't care about this part - probably doesn't hurt anything, though           return parentElement;
+      });
+};

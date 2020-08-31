@@ -290,11 +290,31 @@ Test it by just calling it: (test-process-tag-map-experiment-macro)"
                  ,(some-local-function (car (cdaddr element)))
                  parent-element)))))))
 
-(defmacro with-html-elements (elements)
-  "
-input: html elements as sexprs
-output: javascript that creates the elements in DOM based on the sexprs
-"
+(defun define-ps-swap ()
+(ps
+  (defmacro swap (a b)
+    (with-ps-gensyms (tmp)
+      `(let ((,tmp ,a))
+         (setf ,a ,b)
+         (setf ,b ,tmp))))))
+
+(defun test-ps-swap ()
+  (ps
+    (swap (@ element-a style display) (@ element-b style display))))
+
+(defun define-ps-with-html-macro ()
+  (ps
+    (defmacro with-html-elements (elements)
+      `(chain console (log ,(car elements))))))
+
+(defun test-ps-with-html-macro ()
+  (ps
+    (defun some-function ()
+      (let ((list ([] "abc" "def" "ghi")))
+        (chain list (map #'(lambda (item)
+                             (with-html-elements (tr (td "John") (td "Bill"))))))))))
+
+(defmacro with-inline-html-elements (elements)
   (labels
       ((process-tag-r (element &optional (parent nil parent-supplied-p))
          (let* ((tag (car element))
@@ -314,15 +334,56 @@ output: javascript that creates the elements in DOM based on the sexprs
                        ,@(process-tag-r e parent-element)))))
              (cdr element))))))
     `(ps
-       (defun create-elements (parent-element)
-         ,@(process-tag-r elements)
-         parent-element)
        (let ((parent-element (chain document (get-element-by-id "parent123"))))
-         (create-elements parent-element)))))
+         ,@(process-tag-r elements)
+         parent-element))))
+
+(defun test-with-inline-html-elements ()
+  (with-inline-html-elements
+      (tr (td (style . "color:green;") "John") (td (onclick . "Testclickhandler()") "Bill"))))
+
+(import-macros-from-lisp 'with-html-elements)
+
+(defun test-with-inline-html-elements-in-ps ()
+  (ps
+    (defun some-function ()
+      (let ((some-list ([] 1 2 3)))
+        (chain some-list (map #'(lambda (item)
+                                  (with-inline-html-elements (tr (td item))))))))))
+
+(defmacro with-html-elements (elements)
+"
+input: html elements as sexprs
+output: javascript that creates the elements in DOM based on the sexprs
+"
+(labels
+    ((process-tag-r (element &optional (parent nil parent-supplied-p))
+       (let* ((tag (car element))
+              (parent-element (gensym (concatenate 'string (string-downcase tag) "Element")))
+              (parent-element-parameter (if parent-supplied-p parent (make-symbol "parent-element"))))
+         (cons
+          `(let ((,parent-element (create-an-element ,parent-element-parameter ,(string tag)))))
+          (mapcar
+           #'(lambda (e)
+               (cond
+                 ((cons-pair-p e)
+                  `(set-an-attribute ,parent-element ,(string (car e))  ,(string (cdr e))))
+                 ((stringp e)
+                  `(set-text-node ,parent-element ,e))
+                 ((listp e)
+                  `(progn
+                     ,@(process-tag-r e parent-element)))))
+           (cdr element))))))
+  `(ps
+     (defun create-elements (parent-element)
+       ,@(process-tag-r elements)
+       parent-element)
+     (let ((parent-element (chain document (get-element-by-id "parent123"))))
+       (create-elements parent-element)))))
 
 (defun test-with-html-elements ()
-(with-html-elements
-    (table (tr (td (style . "color:green;") "John") (td (onclick . "testClickHandler()") "Bill")))))
+  (with-html-elements
+      (table (tr (td (style . "color:green;") "John") (td (onclick . "testClickHandler()") "Bill")))))
 
 (defun test-with-hard-coded-version-faux-recursion ()
   (with-hard-coded-version-faux-recursion
