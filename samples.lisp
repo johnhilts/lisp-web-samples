@@ -333,9 +333,11 @@ Test it by just calling it: (test-process-tag-map-experiment-macro)"
                         `(set-text-node ,parent-element ,e))
                        ((listp e)
                         `(progn
-                           ,@(process-tag-r e parent-element)))))
+                           ,@(process-tag-r e parent-element)))
+                       ((symbolp e)
+                        `(set-text-node ,parent-element ,e))))
                  (cdr element))))))
-        `(let ((my-list ,(process-tag-r elements))))))))
+        `(progn ,@(process-tag-r elements))))))
 
 (defun test-ps-with-html-macro ()
   (ps
@@ -344,7 +346,7 @@ Test it by just calling it: (test-process-tag-map-experiment-macro)"
         (chain list (map #'(lambda (item)
                              (with-html-elements
                                  (tr
-                                  (td (style . "color:blue;") "John")
+                                  (td (style . "color:blue;") item)
                                   (td "Bill"))))))))))
 
 (defmacro with-inline-html-elements (elements)
