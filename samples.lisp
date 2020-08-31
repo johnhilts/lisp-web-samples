@@ -302,17 +302,50 @@ Test it by just calling it: (test-process-tag-map-experiment-macro)"
   (ps
     (swap (@ element-a style display) (@ element-b style display))))
 
+(defun define-ps-with-html-macro1 ()
+  (ps
+    (defmacro with-html-elements1 (elements)
+      `(chain console (log ,(car elements))))))
+
+(defun test-ps-with-html-macro1 ()
+  (ps
+    (defun some-function ()
+      (let ((list ([] "abc" "def" "ghi")))
+        (chain list (map #'(lambda (item)
+                             (with-html-elements1 (tr (td (style . "color:blue;") "John") (td "Bill"))))))))))
+
 (defun define-ps-with-html-macro ()
   (ps
     (defmacro with-html-elements (elements)
-      `(chain console (log ,(car elements))))))
+      (labels
+          ((process-tag-r (element &optional (parent nil parent-supplied-p))
+             (let* ((tag (car element))
+                    (parent-element (gensym (concatenate 'string (string-downcase tag) "Element")))
+                    (parent-element-parameter (if parent-supplied-p parent (make-symbol "parent-element"))))
+               (cons
+                `(let ((,parent-element (create-an-element ,parent-element-parameter ,(string tag)))))
+                (mapcar
+                 #'(lambda (e)
+                     (cond
+                       ((cons-pair-p e)
+                        `(set-an-attribute ,parent-element ,(string (car e))  ,(string (cdr e))))
+                       ((stringp e)
+                        `(set-text-node ,parent-element ,e))
+                       ((listp e)
+                        `(progn
+                           ,@(process-tag-r e parent-element)))))
+                 (cdr element))))))
+        `(let ((my-list ,(process-tag-r elements))))))))
 
 (defun test-ps-with-html-macro ()
   (ps
     (defun some-function ()
       (let ((list ([] "abc" "def" "ghi")))
         (chain list (map #'(lambda (item)
-                             (with-html-elements (tr (td "John") (td "Bill"))))))))))
+                             (with-html-elements
+                                 (tr
+                                  (td (style . "color:blue;") "John")
+                                  (td "Bill"))))))))))
 
 (defmacro with-inline-html-elements (elements)
   (labels
