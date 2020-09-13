@@ -36,120 +36,162 @@
 '(jsx-macro ; added quote so it's not compiled
  (tr (td style "color:green;" (ps (alert "hello!"))))) ; only insert parenscript??
 
-(defun lisp->ps (html-elements)
-  "Process each Lisp element and pass it to an appropriate parenscript function"
-  (let ((tag (car html-elements)))
-    (cond
-      ((null html-elements) "")
-      ((cons-pair-p html-elements) (format t "~&Looking at attribute: ~a~%" html-elements))
-      (t
-       (format t "~&createElement(~s)~%" (string tag))
-       (format t "macro output: ~a" (process-tag-experiment tag))
-       (mapcar
-        #'(lambda (element)
-            (format t "~&Looking at: ~a~%" element)
-            (cond
-              ((stringp element) (format t "createTextNode(~s)~%append to parent: ~a~&" element tag))
-              ((listp element) (lisp->ps element))))
-        (cdr html-elements))))))
-
-(defmacro with-lisp-output-ps-experiment (&body html)
-  "turn form into a list; pass it to functions to operate on"
-  `(lisp->ps ',@html))
-
-(defun test-with-lisp-output-ps-experiment ()
-  (with-lisp-output-ps-experiment
-    (tr (td (style . "color-green;") "John"))))
-
-
-(defun cons-pair-p (possible-cons)
-  (and (consp possible-cons) (atom (cdr possible-cons)) (not (null (cdr possible-cons)))))
-
 (ps
+  (defmacro eval-some-js (elements)
+    (labels
+        ((parse-out-js (string)
+           (read-from-string
+            (subseq string
+                    (+ 2 (search "{{" string))
+                    (search "}}" string))))
+         (eval-some-js-r (elements)
+           (if (atom elements)
+               `(chain console (log ,elements))
+               (mapcar
+                #'(lambda (e)
+                    (cond
+                      ((and (typep e 'string) (zerop (search "{{" e)))
+                       `(progn
+                          ,(parse-out-js e)))
+                      ((listp e)
+                       (cons (eval-some-js-r (car e)) (eval-some-js-r (cdr e))))
+                      (t `(chain console (log ,e))))) elements))))
+      (eval-some-js-r elements))))
+
+  (defun test-eval-some-js ()
+    (ps
+      (defun some-function ()
+        (eval-some-js
+         (tr (td "{{(alert \"test123\")}}"))))))
+
+;; transform this: "(update-todo (chain index (to-string)))"
+;; into this: (chain parent-elment-id (add-event-listener "click" (chain update-todo (bind null index)) false))
+;; transform this: "(fun-name param1 ... paramN)"
+;; into this: (chain parent-elment-id (add-event-listener "click" (chain fun-name (bind null param1 paramN)) false))
+(ps
+  (defmacro parse-some-parenscript (string)
+    (let* ((expression (read-from-string string))
+           (fun-name (car expression))
+           (parameters (cdr expression)))
+      `(chain parent-elment-id (add-event-listener "click" (chain ,fun-name (bind null ,@parameters)) false)))))
+
+(defun test-parse-some-parenscript ()
+  (ps (parse-some-parenscript "(update-todo (chain index (to-string)))")))
+
+  (defun lisp->ps (html-elements)
+    "Process each Lisp element and pass it to an appropriate parenscript function"
+    (let ((tag (car html-elements)))
+      (cond
+        ((null html-elements) "")
+        ((cons-pair-p html-elements) (format t "~&Looking at attribute: ~a~%" html-elements))
+        (t
+         (format t "~&createElement(~s)~%" (string tag))
+         (format t "macro output: ~a" (process-tag-experiment tag))
+         (mapcar
+          #'(lambda (element)
+              (format t "~&Looking at: ~a~%" element)
+              (cond
+                ((stringp element) (format t "createTextNode(~s)~%append to parent: ~a~&" element tag))
+                ((listp element) (lisp->ps element))))
+          (cdr html-elements))))))
+
+  (defmacro with-lisp-output-ps-experiment (&body html)
+    "turn form into a list; pass it to functions to operate on"
+    `(lisp->ps ',@html))
+
+  (defun test-with-lisp-output-ps-experiment ()
+    (with-lisp-output-ps-experiment
+        (tr (td (style . "color-green;") "John"))))
+
+
+  (defun cons-pair-p (possible-cons)
+    (and (consp possible-cons) (atom (cdr possible-cons)) (not (null (cdr possible-cons)))))
+
+  (ps
+    (defmacro process-tag-set-attribute-experiment (element-tag attribute)
+      (format t "~&Looking at attribute elements; tag: ~a, attribute: ~a" element-tag attribute)
+      (let* ((tag (string-downcase element-tag))
+             (attribute-key (string (caadr attribute)))
+             (attribute-value (cdadr attribute)))
+        `(ps
+           (defun process-tag-set-attribute (element-tag attribute-key attribute-value)
+             (let ((element (chain document (get-element-by-id element-tag))))
+               (chain element (set-attribute attribute-key attribute-value))
+               element))
+           (process-tag-set-attribute ,tag ,attribute-key ,attribute-value)))))
+
+
   (defmacro process-tag-set-attribute-experiment (element-tag attribute)
     (format t "~&Looking at attribute elements; tag: ~a, attribute: ~a" element-tag attribute)
     (let* ((tag (string-downcase element-tag))
            (attribute-key (string (caadr attribute)))
            (attribute-value (cdadr attribute)))
-      `(ps
-         (defun process-tag-set-attribute (element-tag attribute-key attribute-value)
-           (let ((element (chain document (get-element-by-id element-tag))))
-             (chain element (set-attribute attribute-key attribute-value))
-             element))
-         (process-tag-set-attribute ,tag ,attribute-key ,attribute-value)))))
+      `(ps (defun process-tag-set-attribute (element-tag attribute-key attribute-value)
+             (let ((element (chain document (get-element-by-id element-tag))))
+               (chain element (set-attribute attribute-key attribute-value))
+               element))
+           (process-tag-set-attribute ,tag ,attribute-key ,attribute-value))))
 
 
-(defmacro process-tag-set-attribute-experiment (element-tag attribute)
-  (format t "~&Looking at attribute elements; tag: ~a, attribute: ~a" element-tag attribute)
-  (let* ((tag (string-downcase element-tag))
-         (attribute-key (string (caadr attribute)))
-         (attribute-value (cdadr attribute)))
-    `(ps (defun process-tag-set-attribute (element-tag attribute-key attribute-value)
-           (let ((element (chain document (get-element-by-id element-tag))))
-             (chain element (set-attribute attribute-key attribute-value))
-             element))
-         (process-tag-set-attribute ,tag ,attribute-key ,attribute-value))))
+  (defun test-process-tag-set-attribute-experiment ()
+    (let ((tag (string-downcase 'tr))
+          (attribute '(style . "color:purple;")))
+      (process-tag-set-attribute-experiment tag (list attribute))))
 
-
-(defun test-process-tag-set-attribute-experiment ()
-  (let ((tag (string-downcase 'tr))
-        (attribute '(style . "color:purple;")))
-    (process-tag-set-attribute-experiment tag (list attribute))))
-
-(defmacro interpolate-html-elements-from-lisp-form (&body elements)
-  (format t "~&elements: ~a~%" elements)
-  (labels
-      ((parse-it (element)
-         (format t "~&element: ~a~%" element)
-         (cond
-           ((cons-pair-p element)
-            (list (string-downcase (car element)) (cdr element)))
-           (t element))))
-    `(let ((parsed-elements ,@(mapcar #'parse-it (car elements))))
-       parsed-elements)))
-
-(defun test-interpolate-html-elements-from-lisp-form ()
-  (interpolate-html-elements-from-lisp-form
-   (ps (tr (td (style . "color:purple;") "John")))))
-
-(ps
-  (defmacro test-ps-macro (tags)
-    "This works pretty well, but doesn't do the recursion logic as well for the parent element
-Use (test-the-ps-macro) to call it, or check the output in the repl from the formats when compiling (test-the-ps-macro) "
-    (format t "~&*** starting with ~a ***~%" tags)
+  (defmacro interpolate-html-elements-from-lisp-form (&body elements)
+    (format t "~&elements: ~a~%" elements)
     (labels
-        ((parse-it (e)
-           (let* ((tag e)
-                  (parse-it-r
-                   #'(lambda (e)
-                       (format t "~&Looking at elements in ~a~%" tag)
-                       (cond
-                         ((null e) "")
-                         ((stringp e)
-                          (format t "~&~s is a string" e)
-                          (string e))
-                         ((cons-pair-p e)
-                          (format t "~&Looking at attribute: ~a~%" e)
-                          ;;(format t "~&Output from attribute-set: ~a~%" (process-tag-set-attribute-experiment tag (list (list e)))))
-                          (format t "~&Output from attribute-set: ~s~%" `(ps (set-an-attribute ,tag ,(string (car e)) ,(string (cdr e)))))
-                          (format t "~&tag: ~a, (car e): ~s, (cdr e): ~s~%" tag (string (car e)) (string (cdr e))))
-                         ((atom e)
-                          (format t "~&~a is an atom" e)
-                          (string e))
-                         ((listp e)
-                          (format t "~&~a is a list (make recursive call)" e)
-                          (parse-it (car e))
-                          (parse-it (cdr e)))))))
-             (funcall parse-it-r e))))
-      `(let ((parsed-tags ,@(mapcar #'parse-it tags)))
-         parsed-tags))))
-    
-(defun test-the-ps-macro ()
+        ((parse-it (element)
+           (format t "~&element: ~a~%" element)
+           (cond
+             ((cons-pair-p element)
+              (list (string-downcase (car element)) (cdr element)))
+             (t element))))
+      `(let ((parsed-elements ,@(mapcar #'parse-it (car elements))))
+         parsed-elements)))
+
+  (defun test-interpolate-html-elements-from-lisp-form ()
+    (interpolate-html-elements-from-lisp-form
+     (ps (tr (td (style . "color:purple;") "John")))))
+
   (ps
-    (test-ps-macro
-     (tr (td (style . "color:green;") "John") (td "Bill")))
-    (test-ps-macro
-     (td (style . "color: red;") "John")))))
+    (defmacro test-ps-macro (tags)
+      "This works pretty well, but doesn't do the recursion logic as well for the parent element
+Use (test-the-ps-macro) to call it, or check the output in the repl from the formats when compiling (test-the-ps-macro) "
+      (format t "~&*** starting with ~a ***~%" tags)
+      (labels
+          ((parse-it (e)
+             (let* ((tag e)
+                    (parse-it-r
+                     #'(lambda (e)
+                         (format t "~&Looking at elements in ~a~%" tag)
+                         (cond
+                           ((null e) "")
+                           ((stringp e)
+                            (format t "~&~s is a string" e)
+                            (string e))
+                           ((cons-pair-p e)
+                            (format t "~&Looking at attribute: ~a~%" e)
+                            ;;(format t "~&Output from attribute-set: ~a~%" (process-tag-set-attribute-experiment tag (list (list e)))))
+                            (format t "~&Output from attribute-set: ~s~%" `(ps (set-an-attribute ,tag ,(string (car e)) ,(string (cdr e)))))
+                            (format t "~&tag: ~a, (car e): ~s, (cdr e): ~s~%" tag (string (car e)) (string (cdr e))))
+                           ((atom e)
+                            (format t "~&~a is an atom" e)
+                            (string e))
+                           ((listp e)
+                            (format t "~&~a is a list (make recursive call)" e)
+                            (parse-it (car e))
+                            (parse-it (cdr e)))))))
+               (funcall parse-it-r e))))
+        `(let ((parsed-tags ,@(mapcar #'parse-it tags)))
+           parsed-tags))))
+  
+  (defun test-the-ps-macro ()
+    (ps
+      (test-ps-macro
+       (tr (td (style . "color:green;") "John") (td "Bill")))
+      (test-ps-macro
+       (td (style . "color: red;") "John")))))
 
 (defmacro simple-macro (tag)
   (let* ((element-tag `(string-downcase ,tag))
@@ -214,8 +256,21 @@ Use (test-the-ps-macro) to call it, or check the output in the repl from the for
 (defun test-attribute-experiment ()
   (attribute-experiment (td (style . "color:green;") "John")))
 
-(defun cons-pair-p (possible-cons)
+(defun cons-pair-p1 (possible-cons)
   (and (consp possible-cons) (atom (cdr possible-cons))))
+
+(defun cons-pair-p (possible-cons)
+  (or
+   (and (consp possible-cons) (atom (cdr possible-cons)))
+   (and (consp possible-cons) (listp (cdr possible-cons)) (not (and (= 1 (length (cdr possible-cons))) (listp (car (cdr possible-cons))))))))
+
+(defun test-cons-pair-p ()
+  "all these should be true"
+  (and (cons-pair-p '(1 . 2))
+(cons-pair-p '(1 . "Test"))
+(cons-pair-p '(1 . (alert "123")))
+(cons-pair-p '(1 . (some-function)))
+))
 
 (defmacro process-tag-map-experiment-elements-only (element)
   "**ELEMENTS ONLY VERSION** This has the recursion logic down well!

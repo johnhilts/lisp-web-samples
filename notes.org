@@ -163,3 +163,60 @@ function renderTodoList() {
            // I don't care about this part - probably doesn't hurt anything, though           return parentElement;
       });
 };
+
+
+function someFunction() {
+    var list = ["abc", "def", "ghi"];
+    return list.map(function (item) {
+        var myList =
+ (setAnAttribute(tdElement701, "STYLE", "color:blue;"), setTextNode(tdElement701, "John"))
+(setTextNode(tdElement702, "Bill"));
+        __PS_MV_REG = [];
+        return null;
+    });
+};
+
+(1 . "test")
+(1 . (test))
+(1 . (test 123))
+(tr (td))
+
+(defun cons-pair-p (possible-cons)
+  (or
+   (and (consp possible-cons) (atom (cdr possible-cons)))
+   (and (consp possible-cons) (listp (cdr possible-cons)) (not (and (= 1 length) (listp (car (cdr possible-cons))))))))
+
+(let* ((j '(1 . (some-function)))
+                       (cdrj (cdr j)))
+                  (and (listp cdrj)
+                       (or
+                        (and (= (length cdrj) 1) (not (listp (car cdrj))))
+                        (and (> (length cdrj) 1) (not (listp (car cdrj))))
+
+* Test 1 2 3
+** Sub Test  1 2 3
+
+* Test 2
+** Sub Test 123
+
+| ideal                | "(update-todo (chain index (to-string)))"             | how do you eval for parentscript then put that result in a string? |
+| works                | "(+ \"updateTodo(\" (chain index (to-string)) \")\")" | ugly / hard-to-read                                                |
+| string interpolation | $"updateTodo({index})"                                | might be easy to do with a reader macro; non-lispy?                |
+|                      |                                                       |                                                                    |
+|                      |                                                       |                                                                    |
+|                      |                                                       |                                                                    |
+what about something like ...
+
+can we transform this: ="(update-todo (chain index (to-string)))"=
+... into this:
+=(chain parent-elment-id (add-event-listener "click" (chain update-todo (bind null index)) false))=
+- "click" is the key minus leading "on"
+-  (chain update-todo (bind null index)) should eval as normal parentscript
+(update-todo (chain index (to-string)))
+(chain update-todo (bind null index))
+(fun-name param1 param2)
+(chain fun-name (bind null param1 param2))
+(chain parent-elment-id (add-event-listener "key" (chain fun-name (bind null param1 param2)) false))
+You don't even need regex because everything is already a form!!!
+
+idea - can the attribute value just be the call to "addEventListener"??? (probably not?)
