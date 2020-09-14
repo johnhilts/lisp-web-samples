@@ -69,14 +69,15 @@
 ;; transform this: "(fun-name param1 ... paramN)"
 ;; into this: (chain parent-elment-id (add-event-listener "click" (chain fun-name (bind null param1 paramN)) false))
 (ps
-  (defmacro parse-some-parenscript (string)
+  (defmacro parse-some-parenscript (event-name string)
     (let* ((expression (read-from-string string))
            (fun-name (car expression))
-           (parameters (cdr expression)))
-      `(chain parent-elment-id (add-event-listener "click" (chain ,fun-name (bind null ,@parameters)) false)))))
+           (parameters (cdr expression))
+           (event-attribute-key (subseq (symbol-to-js-string event-name) 2)))
+      `(chain parent-elment-id (add-event-listener ,event-attribute-key (chain ,fun-name (bind null ,@parameters)) false)))))
 
 (defun test-parse-some-parenscript ()
-  (ps (parse-some-parenscript "(update-todo (chain index (to-string)))")))
+  (ps (parse-some-parenscript onclick "(update-todo (chain index (to-string)))")))
 
   (defun lisp->ps (html-elements)
     "Process each Lisp element and pass it to an appropriate parenscript function"
